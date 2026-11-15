@@ -126,10 +126,10 @@ fn poll_midi_messages(
 }
 
 fn handle_midi_input(_stamp: u64, message: &[u8], receiver: &mut Sender<MidiNote>) {
-    if let Ok(note) = decode_midi_note(message) {
-        if let Err(e) = receiver.send(note) {
-            error!("Failed to send MIDI note: {}", e);
-        }
+    if let Ok(note) = decode_midi_note(message)
+        && let Err(e) = receiver.send(note)
+    {
+        error!("Failed to send MIDI note: {}", e);
     }
 }
 
@@ -154,7 +154,7 @@ fn decode_midi_note(message: &[u8]) -> Result<MidiNote, DecodeMidiError> {
 
     let pressed = command == 0x90 && velocity > 0;
     let pressure = velocity as f32 / 127.0 * 100.0;
-    let note_index = (note % 12) as u8;
+    let note_index = note % 12;
     let octave = (note / 12) as i8 - 1;
 
     Ok(MidiNote {
