@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::midi::MidiNoteMessage;
+use crate::midi::{MidiNoteMessage, MidiPortDisconnectedEvent};
 
 pub const MIN_NOTE: i64 = 21; // A0
 pub const MAX_NOTE: i64 = 108; // C8
@@ -14,10 +14,16 @@ pub struct NotePlugin;
 
 impl Plugin for NotePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (handle_midi_notes, update_note_bars, destroy_bars).chain(),
-        );
+        app.add_observer(end_notes_on_device_disconnection)
+            .add_systems(
+                Update,
+                (
+                    handle_midi_notes.run_if(on_message::<MidiNoteMessage>),
+                    update_note_bars,
+                    destroy_bars,
+                )
+                    .chain(),
+            );
     }
 }
 
@@ -27,6 +33,18 @@ struct NoteBar {
     midi_note_id: i64,
     started_at: f64,
     ended_at: Option<f64>,
+}
+
+fn end_notes_on_device_disconnection(
+    _event: On<MidiPortDisconnectedEvent>,
+    time: Res<Time>,
+    notes: Query<&mut NoteBar>,
+) {
+    for mut note in notes {
+        if note.ended_at.is_none() {
+            note.ended_at = Some(time.elapsed_secs_f64());
+        }
+    }
 }
 
 fn handle_midi_notes(
@@ -57,9 +75,9 @@ fn handle_midi_notes(
                 },
             ));
         } else {
-            for mut bar in notes.iter_mut() {
-                if bar.midi_note_id == note.id() && bar.ended_at.is_none() {
-                    bar.ended_at = Some(time.elapsed_secs_f64());
+            for mut notes in notes.iter_mut() {
+                if notes.midi_note_id == note.id() && notes.ended_at.is_none() {
+                    notes.ended_at = Some(time.elapsed_secs_f64());
                 }
             }
         }

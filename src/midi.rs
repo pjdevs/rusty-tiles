@@ -91,6 +91,9 @@ fn try_connect_input_midi_system(mut commands: Commands) {
     });
 }
 
+#[derive(Event)]
+pub struct MidiPortDisconnectedEvent;
+
 fn check_midi_disconnection(midi: Res<MidiInputResource>, mut commands: Commands) {
     let Ok(input) = MidiInput::new("MIDI Monitor") else {
         return;
@@ -98,7 +101,9 @@ fn check_midi_disconnection(midi: Res<MidiInputResource>, mut commands: Commands
 
     if input.find_port_by_id(&midi.midi_port_id).is_none() {
         info!("MIDI device disconnected: {}", midi.midi_port_id);
+
         commands.remove_resource::<MidiInputResource>();
+        commands.trigger(MidiPortDisconnectedEvent);
     }
 }
 
