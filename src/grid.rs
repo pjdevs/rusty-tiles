@@ -50,7 +50,11 @@ fn sync_piano_grid(
         let index = (note - MIN_NOTE) as f32;
         let x = -width / 2.0 + (index + 0.5) * key_width;
         let is_black_key = matches!(note % 12, 1 | 3 | 6 | 8 | 10);
-        let color = if is_black_key { BLACK_KEY_BG } else { WHITE_KEY_BG };
+        let color = if is_black_key {
+            BLACK_KEY_BG
+        } else {
+            WHITE_KEY_BG
+        };
 
         commands.spawn((
             PianoGrid,
