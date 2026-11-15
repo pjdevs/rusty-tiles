@@ -1,9 +1,10 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::midi::{MidiNoteMessage, MidiPortDisconnectedEvent};
+use crate::midi::{MidiNote, MidiNoteMessage, MidiPortDisconnectedEvent};
+use crate::music::NoteId;
 
-pub const MIN_NOTE: i64 = 21; // A0
-pub const MAX_NOTE: i64 = 108; // C8
+pub const MIN_NOTE: u8 = 21; // A0
+pub const MAX_NOTE: u8 = 108; // C8
 pub(crate) const NOTE_SPAWN_LINE_OFFSET: f32 = 100.0;
 const NOTE_COUNT: f32 = (MAX_NOTE - MIN_NOTE + 1) as f32;
 const SPEED: f32 = 120.0;
@@ -29,10 +30,27 @@ impl Plugin for NotePlugin {
 
 #[derive(Component)]
 #[require(Sprite)]
-struct NoteBar {
-    midi_note_id: i64,
+pub struct NoteBar {
+    midi_note: MidiNote,
     started_at: f64,
     ended_at: Option<f64>,
+}
+impl NoteBar {
+    fn new(midi_note: MidiNote, started_at: f64) -> Self {
+        Self {
+            midi_note,
+            started_at,
+            ended_at: None,
+        }
+    }
+
+    pub fn note(&self) -> NoteId {
+        self.midi_note.id()
+    }
+
+    pub fn is_pressed(&self) -> bool {
+        self.ended_at.is_none()
+    }
 }
 
 fn end_notes_on_device_disconnection(
@@ -68,15 +86,11 @@ fn handle_midi_notes(
         if note.pressed {
             commands.spawn((
                 Sprite::from_color(MINT, Vec2::new(20.0, 1.0)),
-                NoteBar {
-                    midi_note_id: note.id(),
-                    started_at: time.elapsed_secs_f64(),
-                    ended_at: None,
-                },
+                NoteBar::new(*note, time.elapsed_secs_f64()),
             ));
         } else {
             for mut notes in notes.iter_mut() {
-                if notes.midi_note_id == note.id() && notes.ended_at.is_none() {
+                if notes.midi_note.id() == note.id() && notes.ended_at.is_none() {
                     notes.ended_at = Some(time.elapsed_secs_f64());
                 }
             }
@@ -96,11 +110,11 @@ fn update_note_bars(
     let play_line_y = -height / 2.0 + NOTE_SPAWN_LINE_OFFSET;
 
     for (note, mut transform, mut sprite) in &mut notes {
-        if !(MIN_NOTE..=MAX_NOTE).contains(&note.midi_note_id) {
+        if !(MIN_NOTE..=MAX_NOTE).contains(&note.midi_note.id().0) {
             continue;
         }
 
-        let index = (note.midi_note_id - MIN_NOTE) as f32;
+        let index = (note.midi_note.id().0 - MIN_NOTE) as f32;
         transform.translation.x = -width / 2.0 + (index + 0.5) * key_width;
 
         let start_y = play_line_y + (now - note.started_at) as f32 * SPEED;

@@ -9,6 +9,8 @@ use std::{
 use bevy::{prelude::*, time::common_conditions::on_real_timer};
 use midir::{Ignore, MidiInput, MidiInputConnection};
 
+use crate::music::{Note, NoteId};
+
 pub struct MidiPlugin;
 
 impl Plugin for MidiPlugin {
@@ -133,10 +135,6 @@ fn handle_midi_input(_stamp: u64, message: &[u8], receiver: &mut Sender<MidiNote
     }
 }
 
-const NOTES: [&str; 12] = [
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-];
-
 fn decode_midi_note(message: &[u8]) -> Result<MidiNote, DecodeMidiError> {
     if message.len() < 3 {
         return Err(DecodeMidiError::PayloadError);
@@ -154,11 +152,11 @@ fn decode_midi_note(message: &[u8]) -> Result<MidiNote, DecodeMidiError> {
 
     let pressed = command == 0x90 && velocity > 0;
     let pressure = velocity as f32 / 127.0 * 100.0;
-    let note_index = note % 12;
     let octave = (note / 12) as i8 - 1;
+    let note = NoteId(note).note();
 
     Ok(MidiNote {
-        note_index,
+        note,
         octave,
         pressed,
         pressure,
@@ -166,8 +164,9 @@ fn decode_midi_note(message: &[u8]) -> Result<MidiNote, DecodeMidiError> {
     })
 }
 
+#[derive(Copy, Clone)]
 pub struct MidiNote {
-    pub note_index: u8,
+    pub note: Note,
     pub octave: i8,
     pub pressed: bool,
     pub pressure: f32,
@@ -175,22 +174,50 @@ pub struct MidiNote {
 }
 
 impl MidiNote {
-    pub fn id(&self) -> i64 {
-        self.note_index as i64 + ((self.octave as i64 + 1) * 12)
+    pub fn id(&self) -> NoteId {
+        let id = (self.octave as i16 + 1) * 12 + self.note as i16;
+
+        NoteId(id.rem_euclid(128) as u8)
     }
 
     pub fn name(&self) -> String {
-        format!("{}{}", NOTES[self.note_index as usize], self.octave)
+        format!("{}{}", self.note, self.octave)
     }
-}
-
-pub fn midi_note_id_to_name(note_id: i64) -> String {
-    let note_index = (note_id % 12) as usize;
-    let octave = (note_id / 12) as i8 - 1;
-    format!("{}{}", NOTES[note_index], octave)
 }
 
 enum DecodeMidiError {
     PayloadError,
     CommandTypeError,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MidiNote, decode_midi_note};
+    use crate::music::NoteId;
+
+    #[test]
+    fn all_midi_note_ids_round_trip() {
+        for value in 0..=127 {
+            let id = NoteId(value);
+            let note = MidiNote {
+                note: id.note(),
+                octave: id.octave(),
+                pressed: true,
+                pressure: 100.0,
+                channel: 1,
+            };
+            assert_eq!(note.id(), id);
+            assert_eq!(note.name(), id.to_string());
+        }
+    }
+
+    #[test]
+    fn decoding_preserves_all_midi_note_ids() {
+        for value in 0..=127 {
+            let Ok(note) = decode_midi_note(&[0x90, value, 127]) else {
+                panic!("Failed to decode MIDI note {value}");
+            };
+            assert_eq!(note.id(), NoteId(value));
+        }
+    }
 }

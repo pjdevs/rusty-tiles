@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{
-    midi::midi_note_id_to_name,
+    music::NoteId,
     note::{MAX_NOTE, MIN_NOTE, NOTE_SPAWN_LINE_OFFSET},
 };
 
@@ -87,7 +87,7 @@ fn sync_piano_grid(
         let x = -width / 2.0 + (index + 0.5) * key_width;
         commands.spawn((
             PianoGrid,
-            Text2d::new(midi_note_id_to_name(note)),
+            Text2d::new(NoteId(note).to_string()),
             TextFont {
                 font_size: FontSize::Px(12.0),
                 ..default()
