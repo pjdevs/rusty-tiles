@@ -1,13 +1,15 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{midi::midi_note_id_to_name, note::{MAX_NOTE, MIN_NOTE}};
+use crate::{
+    midi::midi_note_id_to_name,
+    note::{MAX_NOTE, MIN_NOTE, NOTE_SPAWN_LINE_OFFSET},
+};
 
 const WHITE_KEY_BG: Color = Color::srgb_u8(27, 40, 57);
 const BLACK_KEY_BG: Color = Color::srgb_u8(35, 51, 72);
 const BACKGROUND: Color = Color::srgb_u8(24, 34, 48);
 const GRID_COLOR: Color = Color::srgba(0.502, 0.584, 0.663, 0.25);
 const SPAWN_LINE_COLOR: Color = Color::srgb_u8(241, 206, 112);
-pub(crate) const NOTE_SPAWN_LINE_OFFSET: f32 = 100.0;
 const NOTE_COUNT: f32 = (MAX_NOTE - MIN_NOTE + 1) as f32;
 
 pub struct GridPlugin;

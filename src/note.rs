@@ -1,9 +1,10 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{grid::NOTE_SPAWN_LINE_OFFSET, midi::MidiNoteMessage};
+use crate::midi::MidiNoteMessage;
 
 pub const MIN_NOTE: i64 = 21; // A0
 pub const MAX_NOTE: i64 = 108; // C8
+pub(crate) const NOTE_SPAWN_LINE_OFFSET: f32 = 100.0;
 const NOTE_COUNT: f32 = (MAX_NOTE - MIN_NOTE + 1) as f32;
 const SPEED: f32 = 120.0;
 const MINT: Color = Color::srgb_u8(93, 207, 184);
